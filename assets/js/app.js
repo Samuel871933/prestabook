@@ -160,6 +160,9 @@
         title: norm(e.title), tags: norm(e.tags.concat(e.keywords, e.run ? RUN[e.run].label : []).join(' ')), cat: norm(e.category || ''),
         summary: norm(e.summary || ''), body: norm(e.content + '\n' + e.notes),
       };
+      // Mots du titre, des tags et du résumé, pour tolérer les fautes de frappe.
+      const words = s => [...new Set(s.split(/[^a-z0-9_]+/).filter(w => w.length > 2))];
+      e.words = { title: words(e.hay.title), tags: words(e.hay.tags + ' ' + e.hay.cat), summary: words(e.hay.summary) };
     }));
     if (list.some(e => e.type === 'builder')) {
       const r = await fetch('data/schema-catalog.json', { cache: 'no-cache' });
@@ -169,6 +172,55 @@
   }
 
   /* ---------- Recherche ---------- */
+  // Distance d'édition bornée (une inversion de deux lettres compte pour 1) : renvoie max + 1 dès que l'écart dépasse max.
+  function editDist(a, b, max) {
+    if (Math.abs(a.length - b.length) > max) return max + 1;
+    let pp = null, prev = Array.from({ length: b.length + 1 }, (_, j) => j);
+    for (let i = 1; i <= a.length; i++) {
+      const cur = [i];
+      let best = i;
+      for (let j = 1; j <= b.length; j++) {
+        cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+        if (pp && i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) cur[j] = Math.min(cur[j], pp[j - 2] + 1);
+        best = Math.min(best, cur[j]);
+      }
+      if (best > max) return max + 1;
+      pp = prev;
+      prev = cur;
+    }
+    return prev[b.length];
+  }
+  // « comande » ≈ « commandes » : on compare aussi au début du mot (préfixe de même longueur, ou +1).
+  function near(w, list) {
+    if (w.length < 4) return false;
+    const max = w.length >= 7 ? 2 : 1;
+    return list.some(x => editDist(w, x, max) <= max || editDist(w, x.slice(0, w.length), max) <= max
+      || editDist(w, x.slice(0, w.length + 1), max) <= max);
+  }
+  function wordScore(e, w) {
+    const h = e.hay;
+    const s = (h.title.includes(w) ? 10 : 0) + (h.tags.includes(w) ? 5 : 0) + (h.cat.includes(w) ? 4 : 0)
+      + (h.summary.includes(w) ? 3 : 0) + (h.body.includes(w) ? 1 : 0);
+    if (s) return s;
+    return near(w, e.words.title) ? 6 : near(w, e.words.tags) ? 3 : near(w, e.words.summary) ? 2 : 0;
+  }
+  // Onglet du générateur évoqué par la recherche (« export commande » → Commandes).
+  function entityFromQuery() {
+    if (!window.PBBuilder) return null;
+    for (const w of tokens()) {
+      for (const [k, x] of Object.entries(window.PBBuilder.ENTITIES)) {
+        const l = norm(x.label);
+        if (w.length >= 4 && (l.startsWith(w.slice(0, w.length - 1)) || near(w, [l]))) return k;
+      }
+    }
+    return null;
+  }
+  function openEntry(e) {
+    const ent = e.type === 'builder' && entityFromQuery();
+    if (ent) { bstate.entity = ent; bSave(); }
+    location.hash = '#/e/' + encodeURIComponent(e.id);
+  }
+
   function results() {
     const t = tokens();
     const out = [];
@@ -179,9 +231,7 @@
       if (state.ver && e.vkeys.length && !e.vkeys.includes(state.ver)) continue;
       let score = 0;
       for (const w of t) {
-        const h = e.hay;
-        const s = (h.title.includes(w) ? 10 : 0) + (h.tags.includes(w) ? 5 : 0) + (h.cat.includes(w) ? 4 : 0)
-          + (h.summary.includes(w) ? 3 : 0) + (h.body.includes(w) ? 1 : 0);
+        const s = wordScore(e, w);
         if (!s) { score = -1; break; }
         score += s;
       }
@@ -536,6 +586,31 @@
     if (!picked.length) return '<p class="b-picked__empty">Aucune colonne pour l’instant : coche des champs ci-dessous ou pars de la sélection <strong>Essentiel</strong>.</p>';
     return picked.map(([f, g]) => `<button type="button" class="b-chip" data-b-act="unpick" data-id="${esc(f.id)}" title="${esc(g.label)} · cliquer pour retirer">${f.raw ? `<code>${esc(f.col)}</code>` : esc(f.label)}<span aria-hidden="true">✕</span></button>`).join('');
   }
+  const isRaw = g => g.fields.some(f => f.raw);
+  /* Compteurs : par groupe (cochés / cochables), par section, et « +N en clair » sur le groupe brut
+     d'où vient un champ lisible : celui dont la jointure est utilisée par le champ, sinon la table principale. */
+  function bCounts(ent) {
+    const conf = bConf(ent), sel = new Set(conf.selected), ok = usableFor(conf);
+    const joins = window.PBBuilder.ENTITIES[ent].joins;
+    const groups = bGroups(ent), raws = groups.filter(isRaw);
+    const main = raws.find(g => !g.join);
+    const closure = list => { const out = new Set(); const add = j => { if (out.has(j) || !joins[j]) return; out.add(j); (joins[j].after || []).forEach(add); }; list.forEach(add); return out; };
+    const c = { group: {}, rel: {}, cur: 0, raw: 0 };
+    for (const g of groups) {
+      const n = g.fields.filter(f => sel.has(f.id) && ok(f)).length;
+      c.group[g.id] = [n, g.fields.filter(ok).length];
+      c[isRaw(g) ? 'raw' : 'cur'] += n;
+      if (isRaw(g)) continue;
+      for (const f of g.fields.filter(x => sel.has(x.id) && ok(x))) {
+        const used = closure(f.joins);
+        const target = raws.find(r => r.join && used.has(r.join)) || main;
+        if (target) c.rel[target.id] = (c.rel[target.id] || 0) + 1;
+      }
+    }
+    return c;
+  }
+  const relText = n => (n ? `+${n} en clair` : '');
+  const secText = n => `${n} coché${n > 1 ? 's' : ''}`;
   function dockText(cols) {
     const ent = bEnt();
     return `<strong>${cols}</strong> colonne${cols > 1 ? 's' : ''} · ${esc(window.PBBuilder.ENTITIES[ent].label)} · PS ${esc(bctx.label)}`;
@@ -555,13 +630,13 @@
         <span class="b-badges">${f.lang ? '<i class="b-badge b-badge--lang" title="Une colonne par langue choisie dans les réglages">par langue</i>' : ''}${f.agg ? '<i class="b-badge b-badge--agg" title="Plusieurs valeurs dans la même cellule, séparées par |">liste</i>' : ''}${vr ? `<i class="b-badge b-badge--ver" title="Existe en PS ${esc(vr)}">${esc(vr)}</i>` : ''}</span>
       </label>`;
     };
-    const isRaw = g => g.fields.some(f => f.raw);
+    const cnt = bCounts(ent);
     const groupHTML = g => {
-      const avail = g.fields.filter(f => f.available);
-      const n = g.fields.filter(f => sel.has(f.id) && f.available).length;
+      const [n, total] = cnt.group[g.id];
+      const rel = cnt.rel[g.id] || 0;
       const isOpen = open[ent + ':' + g.id] ?? !isRaw(g);
       return `<details class="b-group" data-b-group="${esc(g.id)}"${isOpen ? ' open' : ''}>
-        <summary><span class="b-gtitle">${esc(g.label)}</span><span class="b-gcount">${n} / ${avail.length}</span>
+        <summary><span class="b-gtitle">${esc(g.label)}</span>${g.table ? `<code class="b-gtable" title="Table ${esc(g.table)}">${esc(g.table)}</code>` : ''}<span class="b-gcount">${n} / ${total}</span>${isRaw(g) ? `<span class="b-grel" title="Champs « en clair » cochés plus haut qui viennent de cette table">${relText(rel)}</span>` : ''}
           <span class="b-gacts"><button type="button" class="link-btn" data-b-act="group-all" data-g="${esc(g.id)}">tout cocher</button><button type="button" class="link-btn" data-b-act="group-none" data-g="${esc(g.id)}">tout décocher</button></span></summary>
         <div class="b-fields">${g.fields.map(fieldHTML).join('')}</div>
       </details>`;
@@ -594,9 +669,10 @@
       ${step(2, 'Quelles colonnes ?', 'Une colonne cochée = une colonne du fichier exporté. Clique sur une colonne du bandeau pour la retirer.', `
         <div class="b-picked" id="b-picked">${pickedHTML()}</div>
         <input type="search" class="b-search" data-b-search placeholder="Chercher un champ (ex. ean, email, ville, meta…)" autocomplete="off" spellcheck="false">
+        ${raw.length ? `<p class="b-subhead">Champs prêts à lire <span class="b-scount" data-sec="cur">${secText(cnt.cur)}</span><small>noms, libellés et listes à la place des identifiants</small></p>` : ''}
         <div class="b-groups">${curated.map(groupHTML).join('')}</div>
         ${raw.length ? `<div class="b-raw">
-          <p class="b-subhead">Colonnes des tables <small>tous les champs de la base, sous leur nom technique</small></p>
+          <p class="b-subhead">Colonnes brutes de la base <span class="b-scount" data-sec="raw">${secText(cnt.raw)}</span><small>valeurs stockées telles quelles : identifiants, codes, montants</small></p>
           <div class="b-groups">${raw.map(groupHTML).join('')}</div>
         </div>` : ''}`,
         `<span class="b-presets"><button type="button" class="btn btn--soft" data-b-act="preset" title="Une sélection de colonnes courantes">Essentiel</button><button type="button" class="btn btn--soft" data-b-act="all">Tout</button><button type="button" class="btn btn--soft" data-b-act="none">Vider</button></span>`)}
@@ -645,12 +721,15 @@
     }
     $('#b-out').innerHTML = builderOutput();
     $('#b-picked').innerHTML = pickedHTML();
-    // compteurs des groupes
-    const sel = new Set(bConf(bEnt()).selected);
+    // compteurs des groupes et des sections
+    const cnt = bCounts(bEnt());
     document.querySelectorAll('.b-group').forEach(d => {
-      const boxes = [...d.querySelectorAll('[data-b-field]:not([disabled])')];
-      d.querySelector('.b-gcount').textContent = `${boxes.filter(b => sel.has(b.dataset.bField)).length} / ${boxes.length}`;
+      const id = d.dataset.bGroup, [n, total] = cnt.group[id] || [0, 0];
+      d.querySelector('.b-gcount').textContent = `${n} / ${total}`;
+      const rel = d.querySelector('.b-grel');
+      if (rel) rel.textContent = relText(cnt.rel[id] || 0);
     });
+    document.querySelectorAll('[data-sec]').forEach(x => { x.textContent = secText(cnt[x.dataset.sec]); });
   }
   function filterFields(q) {
     const t = norm(q.trim());
@@ -770,6 +849,11 @@
 
   document.addEventListener('click', async ev => {
     if (bctx && builderClick(ev)) return;
+    const open = state.q && ev.target.closest('.card h3 a');
+    if (open) {
+      const e = state.entries.find(x => '#/e/' + encodeURIComponent(x.id) === open.getAttribute('href'));
+      if (e) { ev.preventDefault(); openEntry(e); return; }
+    }
     const f = ev.target.closest('[data-filter]');
     if (f) {
       const k = f.dataset.filter, v = f.dataset.value || null;
@@ -869,7 +953,7 @@
   input.addEventListener('keydown', ev => {
     if (ev.key === 'Enter') {
       const first = results()[0];
-      if (first) { location.hash = '#/e/' + encodeURIComponent(first.id); input.blur(); }
+      if (first) { openEntry(first); input.blur(); }
     } else if (ev.key === 'Escape') {
       if (input.value) { input.value = state.q = ''; showList(); } else input.blur();
     }

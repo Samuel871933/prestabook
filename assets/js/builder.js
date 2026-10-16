@@ -38,7 +38,7 @@
       groups: [
         { id: 'customer', label: 'Client', table: 'customer', alias: 'c',
           exclude: ['passwd', 'secure_key', 'reset_password_token', 'reset_password_validity'] },
-        { id: 'customer_rel', label: 'Client : libellés liés', fields: [
+        { id: 'customer_rel', label: 'Infos du client, en clair', fields: [
           { id: 'gender', label: 'Civilité', sql: 'gl.name', joins: ['gl'], needs: ['gender_lang.name'] },
           { id: 'lang_iso', label: 'Langue (code ISO)', sql: 'lg.iso_code', joins: ['lg'], needs: ['customer.id_lang'] },
           { id: 'lang_name', label: 'Langue (nom)', sql: 'lg.name', joins: ['lg'], needs: ['customer.id_lang'] },
@@ -51,7 +51,7 @@
             sql: `GROUP_CONCAT(DISTINCT cg.id_group ORDER BY cg.id_group SEPARATOR '|')`,
             sub: `(SELECT GROUP_CONCAT(cg2.id_group ORDER BY cg2.id_group SEPARATOR '|') FROM ${P}customer_group cg2 WHERE cg2.id_customer = c.id_customer)` },
         ] },
-        { id: 'customer_stats', label: 'Commandes validées', fields: [
+        { id: 'customer_stats', label: 'Ses commandes (validées)', fields: [
           { id: 'orders_count', label: 'Nombre de commandes', agg: true, joins: ['o'], sql: 'COUNT(DISTINCT o.id_order)',
             sub: `(SELECT COUNT(*) FROM ${P}orders o2 WHERE o2.id_customer = c.id_customer AND o2.valid = 1)` },
           { id: 'first_order', label: 'Première commande', agg: true, joins: ['o'], sql: 'MIN(o.date_add)',
@@ -121,7 +121,7 @@
       },
       groups: [
         { id: 'orders', label: 'Commande', table: 'orders', alias: 'o', exclude: ['secure_key'] },
-        { id: 'order_rel', label: 'Commande : libellés liés', fields: [
+        { id: 'order_rel', label: 'Infos de la commande, en clair', fields: [
           { id: 'state', label: 'État actuel', sql: 'osl.name', joins: ['osl'] },
           { id: 'currency_iso', label: 'Devise (ISO)', sql: 'cur.iso_code', joins: ['cur'] },
           { id: 'carrier_name', label: 'Transporteur', sql: 'ca.name', joins: ['ca'] },
@@ -130,11 +130,11 @@
           { id: 'total_ttc_eur', label: 'Total payé TTC (devise par défaut)', sql: 'ROUND(o.total_paid_tax_incl / o.conversion_rate, 2)' },
           { id: 'total_ht_eur', label: 'Total payé HT (devise par défaut)', sql: 'ROUND(o.total_paid_tax_excl / o.conversion_rate, 2)' },
         ] },
-        { id: 'order_customer_rel', label: 'Client', fields: [
+        { id: 'order_customer_rel', label: 'Client, en clair', fields: [
           { id: 'cu_name', label: 'Client : nom complet', sql: "CONCAT(cu.firstname, ' ', cu.lastname)", joins: ['cu'] },
           { id: 'cu_gender', label: 'Client : civilité', sql: 'cgdl.name', joins: ['cu', 'cgdl'] },
         ] },
-        { id: 'customer', label: 'Client : toutes les colonnes', table: 'customer', alias: 'cu', join: 'cu',
+        { id: 'customer', label: 'Client', table: 'customer', alias: 'cu', join: 'cu',
           hp: { label: 'Client : ', tech: 'customer_' },
           exclude: ['passwd', 'secure_key', 'reset_password_token', 'reset_password_validity'] },
         { id: 'delivery', label: 'Adresse de livraison', table: 'address', alias: 'ad', join: 'ad',
@@ -147,7 +147,7 @@
             { id: 'ai_country', label: 'Facturation : pays', sql: 'aicl.name', joins: ['ai', 'aicl'] },
             { id: 'ai_state', label: 'Facturation : état / région', sql: 'aist.name', joins: ['ai', 'aist'] },
           ] },
-        { id: 'order_lists', label: 'Contenu, paiements, réductions, suivi', fields: [
+        { id: 'order_lists', label: 'Listes : produits, paiements, réductions, suivi', fields: [
           { id: 'lines', label: 'Produits (qté x nom [réf])', agg: true, joins: ['od'],
             sql: `GROUP_CONCAT(DISTINCT CONCAT(od.product_quantity, ' x ', od.product_name, ' [', od.product_reference, ']') ORDER BY od.id_order_detail SEPARATOR '|')`,
             sub: `(SELECT GROUP_CONCAT(CONCAT(od2.product_quantity, ' x ', od2.product_name, ' [', od2.product_reference, ']') ORDER BY od2.id_order_detail SEPARATOR '|') FROM ${P}order_detail od2 WHERE od2.id_order = o.id_order)` },
@@ -220,15 +220,15 @@
         { id: 'product', label: 'Produit', table: 'product', alias: 'p' },
         { id: 'product_shop', label: 'Produit : valeurs de la boutique', table: 'product_shop', alias: 'ps', join: 'ps', exclude: ['id_product', 'id_shop'] },
         { id: 'product_lang', label: 'Produit : textes (par langue)', table: 'product_lang', alias: 'pl', join: 'pl', lang: true, exclude: ['id_product', 'id_shop', 'id_lang'] },
-        { id: 'stock', label: 'Stock (stock_available)', table: 'stock_available', alias: 'sa', join: 'sa', exclude: ['id_product', 'id_product_attribute'] },
-        { id: 'product_rel', label: 'Libellés liés', fields: [
+        { id: 'stock', label: 'Stock', table: 'stock_available', alias: 'sa', join: 'sa', exclude: ['id_product', 'id_product_attribute'] },
+        { id: 'product_rel', label: 'Infos du produit, en clair', fields: [
           { id: 'manufacturer', label: 'Marque', sql: 'm.name', joins: ['m'] },
           { id: 'supplier', label: 'Fournisseur par défaut', sql: 's.name', joins: ['s'] },
           { id: 'tax_rules', label: 'Règle de taxes', sql: 'trg.name', joins: ['trg'] },
           { id: 'default_category', label: 'Catégorie par défaut', sql: 'cd{{L}}.name', joins: ['cd'], lang: true },
           { id: 'product_url', label: 'Lien de la fiche produit', sql: `CONCAT('{{shop_url}}/index.php?controller=product&id_product=', p.id_product)` },
         ] },
-        { id: 'product_lists', label: 'Listes (catégories, tags, caractéristiques…)', fields: [
+        { id: 'product_lists', label: 'Listes : catégories, tags, caractéristiques…', fields: [
           { id: 'categories', label: 'Catégories (noms)', agg: true, joins: ['cp', 'cpl'],
             sql: `GROUP_CONCAT(DISTINCT cpl.name ORDER BY cpl.name SEPARATOR '|')`,
             sub: `(SELECT GROUP_CONCAT(cl2.name ORDER BY cl2.name SEPARATOR '|') FROM ${P}category_product cp2 INNER JOIN ${P}category_lang cl2 ON cl2.id_category = cp2.id_category AND cl2.id_shop = {{id_shop}} AND cl2.id_lang = {{L0}} WHERE cp2.id_product = p.id_product)` },
@@ -292,7 +292,7 @@
       groups: [
         { id: 'product_attribute', label: 'Déclinaison', table: 'product_attribute', alias: 'pa' },
         { id: 'product_attribute_shop', label: 'Déclinaison : valeurs de la boutique', table: 'product_attribute_shop', alias: 'pas', join: 'pas', exclude: ['id_product_attribute', 'id_product', 'id_shop'] },
-        { id: 'stock', label: 'Stock (stock_available)', table: 'stock_available', alias: 'sa', join: 'sa', exclude: ['id_product', 'id_product_attribute'] },
+        { id: 'stock', label: 'Stock', table: 'stock_available', alias: 'sa', join: 'sa', exclude: ['id_product', 'id_product_attribute'] },
         { id: 'combination_product', label: 'Produit parent', fields: [
           { id: 'product_name', label: 'Produit : nom', sql: 'pl{{L}}.name', joins: ['pl'], lang: true },
           { id: 'product_reference', label: 'Produit : référence', sql: 'p.reference', joins: ['p'] },
@@ -343,7 +343,7 @@
         ...f, tech: f.id, joins: f.joins || [], lang: !!f.lang,
         available: (f.needs || []).every(has), versions: null,
       }));
-      return { id: g.id, label: g.label, lang: !!g.lang, fields: fields.concat(extra) };
+      return { id: g.id, label: g.label, table: g.table || null, join: g.join || null, lang: !!g.lang, fields: fields.concat(extra) };
     });
   }
 

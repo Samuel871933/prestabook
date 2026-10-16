@@ -479,7 +479,7 @@ button.tag.is-active:hover { background: var(--pink-600); border-color: var(--pi
 .b-chip:hover span { background: var(--pink); color: #fff; }
 .b-raw { display: flex; flex-direction: column; gap: 8px; }
 .b-raw[hidden], .b-nomatch[hidden] { display: none; }
-.b-subhead { margin: 8px 0 0; font-size: 13px; font-weight: 600; color: var(--text-2); }
+.b-subhead { margin: 4px 0 0; font-size: 13px; font-weight: 600; color: var(--text-2); }
 .b-subhead small { font-weight: 400; color: var(--muted); margin-left: 6px; }
 .b-nomatch { margin: 0; font-size: 13.5px; color: var(--muted); }
 .b-filters { display: flex; flex-direction: column; gap: 10px; }
@@ -525,6 +525,12 @@ button.tag.is-active:hover { background: var(--pink-600); border-color: var(--pi
 .b-group summary::before { content: "▸"; color: var(--pink); transition: transform .15s; }
 .b-group[open] summary::before { transform: rotate(90deg); }
 .b-gcount { font: 500 12px var(--mono); color: var(--muted); }
+.b-grel { font-size: 12px; font-weight: 500; color: #128ba5; }
+.b-grel:empty { display: none; }
+.b-scount { margin-left: 6px; font: 500 11.5px var(--mono); color: var(--pink); background: var(--pink-soft); border-radius: 999px; padding: 1px 8px; }
+:root[data-theme="dark"] .b-grel { color: var(--cyan); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .b-grel { color: var(--cyan); } }
+.b-gtable { font-size: 11.5px; font-weight: 400; color: var(--muted); background: var(--surface-2); border: 1px solid var(--border); border-radius: 4px; padding: 0 5px; }
 .b-gacts { margin-left: auto; display: flex; gap: 12px; }
 .b-fields { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr)); gap: 4px 10px; padding: 0 14px 12px; }
 .b-field {

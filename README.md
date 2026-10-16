@@ -113,5 +113,5 @@ Le champ ajoute un badge sur les cartes et les fiches, et alimente le filtre « 
 - `Entrée` : ouvre le premier résultat
 - `Échap` : vide la recherche
 
-La recherche ignore accents et casse, et fouille aussi le contenu des requêtes (tape un nom de table, ex. `specific_price`).
+La recherche ignore accents et casse, tolère une faute de frappe par mot (« comande », « clinet »), et fouille aussi le contenu des requêtes (tape un nom de table, ex. `specific_price`). Ouvrir le générateur depuis une recherche qui cite clients, commandes, produits ou déclinaisons l’ouvre sur le bon onglet.
 # prestabook
