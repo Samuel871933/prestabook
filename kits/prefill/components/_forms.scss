@@ -1,0 +1,52 @@
+@use "../partials/variables" as *;
+
+// Pré-rempli par PrestaBook. Couleurs, polices et arrondis : partials/_variables.scss.
+// Marche avec Hummingbird et Classic : les sélecteurs de l'autre thème ne gênent pas.
+
+// Champs Bootstrap (Hummingbird et Classic).
+.form-control,
+.form-select {
+    border: 1px solid $border;
+    border-radius: $radius;
+    padding: .6rem .85rem;
+    transition: border-color $transition, box-shadow $transition;
+
+    &:focus {
+        border-color: $primary;
+        box-shadow: 0 0 0 .2rem color-mix(in srgb, #{$primary} 20%, transparent);
+    }
+}
+
+// Hummingbird : .form-label ; Classic : .form-control-label
+.form-label,
+.form-control-label {
+    font-size: .9rem;
+    font-weight: 600;
+}
+
+// Cases à cocher (Hummingbird : .form-check-input ; Classic : .custom-checkbox)
+.form-check-input:checked {
+    background-color: $primary;
+    border-color: $primary;
+}
+
+.custom-checkbox input[type="checkbox"]:checked + span {
+    border-color: $primary;
+}
+
+// Textes d'aide et erreurs
+.form-text,
+.form-control-comment {
+    color: $muted;
+    font-size: .825rem;
+}
+
+.form-control.is-invalid,
+.has-error .form-control {
+    border-color: $danger;
+}
+
+.invalid-feedback,
+.help-block {
+    color: $danger;
+}

@@ -114,5 +114,48 @@
     "updated": "2026-10-16",
     "file": "content/notes/chemin-images-produits.md",
     "summary": "Comment PrestaShop range les images produits sur le disque, et comment reconstruire leur URL en SQL."
+  },
+  {
+    "id": "kit-dev-scss",
+    "title": "Kit _dev : SCSS pour un thème PrestaShop",
+    "type": "note",
+    "category": "Développer un thème",
+    "tags": [
+      "thème",
+      "scss"
+    ],
+    "keywords": [
+      "_dev",
+      "assets",
+      "boutons",
+      "child theme",
+      "classic",
+      "composants",
+      "dart sass",
+      "footer",
+      "generateur",
+      "header",
+      "hummingbird",
+      "kit",
+      "miniature",
+      "node-sass",
+      "npm",
+      "package.json",
+      "pre-rempli",
+      "sass",
+      "scss",
+      "telecharger",
+      "theme enfant",
+      "theme.yml",
+      "watch"
+    ],
+    "versions": [
+      "8.x",
+      "9.x"
+    ],
+    "status": "testé (Sass 1.99, Node 22)",
+    "updated": "2026-10-16",
+    "file": "content/notes/kit-dev-scss.md",
+    "summary": "Télécharge le dossier de ton thème enfant (Hummingbird, Classic…) : config/theme.yml pré-rempli et _dev pour le SCSS (package.json Dart Sass, composants vides ou pré-remplis). Puis compiler et activer."
   }
 ]

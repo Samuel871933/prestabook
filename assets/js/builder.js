@@ -367,7 +367,9 @@
     const groups = fieldsOf(entityKey, catalog, opts.version);
     const all = groups.flatMap(g => g.fields);
     const sel = new Set(opts.selected || []);
-    const chosen = all.filter(f => sel.has(f.id) && f.available && !(f.subOnly && !sub));
+    // Colonnes dans l'ordre de la sélection (ordre tapé dans l'assistant, des clics ou du préréglage).
+    const rank = new Map((opts.selected || []).map((id, i) => [id, i]));
+    const chosen = all.filter(f => sel.has(f.id) && f.available && !(f.subOnly && !sub)).sort((a, b) => rank.get(a.id) - rank.get(b.id));
     const skipped = all.filter(f => sel.has(f.id) && (!f.available || (f.subOnly && !sub)));
 
     const used = new Set(Object.keys(ent.joins).filter(j => ent.joins[j].always));

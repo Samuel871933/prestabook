@@ -11,6 +11,18 @@ python3 -m http.server 8000
 # puis http://localhost:8000
 ```
 
+## Kits téléchargeables (`kits/`)
+
+Un bloc ```` ```kit ```` dans une note (contenu : le nom du kit, ex. `dev`) affiche un générateur. On y choisit le nom du thème et le parent (qui remplissent aussi `{{theme}}` et `{{theme_parent}}` dans les exemples de la note), l'ajout de `config/theme.yml` (parent, nom, chargement du CSS et du JS compilés), puis pour chaque composant « sans / vide / pré-rempli ». Le zip `<thème>/` (`config/theme.yml` + `_dev/`) est assemblé dans le navigateur (`assets/js/kit.js`), sans serveur.
+
+- `kits/dev/` : le contenu du dossier `_dev`, composants vides.
+- `kits/prefill/components/` : les versions pré-remplies des composants.
+- `kits/dev.json` : le manifeste (dossier racine du zip, liste des fichiers, composants). Après avoir ajouté ou retiré un fichier dans `kits/dev/`, mets à jour sa liste `files`. Pour un nouveau composant, ajoute son fichier vide dans `kits/dev/css/components/`, sa version pré-remplie dans `kits/prefill/components/`, son `@use` dans `theme.scss` et une entrée dans `components`.
+
+## Cache du navigateur
+
+Dans `index.html`, les liens vers `style.css` et les scripts portent un numéro de version (`?v=2026-10-16j`). **Change-le à chaque modification du CSS ou du JS**, par exemple avec la date du jour, sinon les navigateurs peuvent garder l'ancienne version. En local, un rechargement forcé (Ctrl+Maj+R) suffit aussi.
+
 ## Publier sur GitHub Pages
 
 1. Pousser le dossier sur un dépôt GitHub.
@@ -106,6 +118,27 @@ La fiche de type `builder` (« Export configurable clients, commandes, produits,
 - `db` : à lancer dans phpMyAdmin, Adminer, DBeaver… Le Gestionnaire SQL refuse par exemple `SET`, les tables dérivées `JOIN (SELECT …)` ou `REPLACE()`.
 
 Le champ ajoute un badge sur les cartes et les fiches, et alimente le filtre « Où lancer la requête ? » de la barre latérale.
+
+## Assistant (barre de recherche)
+
+La recherche comprend aussi une demande. Un encart montre ce qui a été compris, et **Entrée** ouvre la fiche déjà réglée. Exemples :
+
+- `commandes ref, client, transporteur, total ttc, produits depuis 01/01/2025 validées limite 500`
+- `clients nom prénom email date de naissance abonnés newsletter sans invités`
+- `produits essentiel + poids, meta titre en ps 1.7 langues 1:fr,2:en`
+- `déclinaisons ref ean prix stock attributs images`
+- `export produits csv 1.6 vers 8 préfixe abc_` (ouvre la fiche CSV avec ces versions)
+
+Ce qu'il reconnaît :
+
+- **Entité** : clients, commandes, produits, déclinaisons (tolère les fautes, ex. « comande »).
+- **Colonnes** : tous les champs du générateur, par libellé (« Transporteur »), par nom technique (`total_paid_tax_incl`, `orders.reference`) ou en français courant (ref, prix, ttc, ville de livraison, pays de facturation, date de naissance, code postal, meta titre…). Les colonnes sortent **dans l'ordre tapé**. `essentiel` ou `tout` partent d'une sélection toute faite.
+- **Filtres** : leurs libellés et des formules courantes (validées, actifs, sans invités, sans brouillons, toutes boutiques…). Pour les dates des commandes : `depuis 01/01/2025`, `du … au …`, `entre … et …`, `en mars 2025`, `2025`, `les 30 derniers jours`, `ce mois`, `le mois dernier`, `cette année`, `hier`. Et aussi `état 4`, `limite 500`, `100 premières`.
+- **Réglages** : `ps 1.7` / `presta 8` (version), `1.6 vers 8` (migration), `langues 1:fr,2:en`, `boutique 2`, `préfixe abc_`, une URL de boutique, `noms techniques`, `sous-requêtes`.
+
+Les mots non compris et les choix ambigus sont signalés dans l'encart. Le vocabulaire (synonymes, expressions figées, champ choisi par défaut pour chaque mot) se trouve en haut de `assets/js/assistant.js`.
+
+**Après avoir ajouté un champ, un filtre ou une entité** au générateur, lance `node tests/assistant.test.js`. Le test vérifie que chaque champ reste atteignable par son libellé, son id et `table.colonne`, pour chaque version, ainsi que les phrases d'exemple.
 
 ## Raccourcis
 

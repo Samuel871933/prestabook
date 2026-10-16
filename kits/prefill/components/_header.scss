@@ -1,0 +1,91 @@
+@use "../partials/variables" as *;
+
+// Pré-rempli par PrestaBook. Couleurs, polices et arrondis : partials/_variables.scss.
+// Marche avec Hummingbird et Classic : les sélecteurs de l'autre thème ne gênent pas.
+
+#header {
+    background-color: $white;
+    box-shadow: 0 1px 0 $border;
+
+    img.logo,
+    .logo img {
+        max-height: 56px;
+        width: auto;
+    }
+}
+
+// ── Hummingbird ──
+#header {
+    .header-bottom {
+        padding-block: .75rem;
+    }
+
+    // Icônes compte, panier, favoris
+    .header-block__action-btn {
+        color: $text;
+        transition: color $transition;
+
+        &:hover { color: $primary; }
+    }
+
+    // Nombre d'articles du panier
+    .header-block__badge {
+        background-color: $primary;
+        color: $white;
+        font-size: .7rem;
+        font-weight: 700;
+        min-width: 1.25rem;
+        height: 1.25rem;
+        border-radius: 999px;
+    }
+
+    .ps-searchbar__input {
+        border: 1px solid $border;
+        border-radius: 999px;
+        padding-inline: 1rem;
+
+        &:focus {
+            border-color: $primary;
+            box-shadow: 0 0 0 .2rem color-mix(in srgb, #{$primary} 20%, transparent);
+            outline: 0;
+        }
+    }
+}
+
+// ── Classic ──
+#header {
+    .header-nav {
+        font-size: .875rem;
+        border-bottom: 1px solid $border;
+
+        a { color: $text; }
+    }
+
+    .header-top {
+        padding-block: .75rem;
+    }
+
+    // Menu principal
+    #top-menu > li > a {
+        font-weight: 600;
+        transition: color $transition;
+
+        &:hover { color: $primary; }
+    }
+
+    // Nombre d'articles du panier
+    .cart-products-count {
+        color: $primary;
+        font-weight: 700;
+    }
+
+    #search_widget input[type="text"] {
+        border: 1px solid $border;
+        border-radius: 999px;
+
+        &:focus {
+            border-color: $primary;
+            outline: 0;
+        }
+    }
+}

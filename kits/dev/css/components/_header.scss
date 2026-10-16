@@ -1,0 +1,31 @@
+@use "../partials/variables" as *;
+
+#header {
+}
+
+// ── Hummingbird ──
+#header {
+    .header-top {
+    }
+
+    .header-bottom {
+    }
+
+    .header-block__action-btn {
+    }
+
+    .header-block__badge {
+    }
+}
+
+// ── Classic ──
+#header {
+    .header-nav {
+    }
+
+    .header-top {
+    }
+
+    .cart-products-count {
+    }
+}

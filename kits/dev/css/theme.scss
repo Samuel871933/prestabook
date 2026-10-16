@@ -1,0 +1,20 @@
+// Point d'entrée, compilé en theme.css (chargé par le bloc assets de config/theme.yml).
+// Commente les lignes dont tu n'as pas besoin.
+
+@use "partials/variables";
+
+// Composants (optionnels)
+@use "components/typography";
+@use "components/buttons";
+@use "components/header";
+@use "components/footer";
+@use "components/product-miniature";
+@use "components/forms";
+
+// Pages
+@use "pages/home";
+@use "pages/category";
+@use "pages/product";
+@use "pages/checkout";
+@use "pages/account";
+@use "pages/cms";

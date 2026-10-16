@@ -1,0 +1,27 @@
+@use "../partials/variables" as *;
+
+// Carte produit (listes, accueil, produits associés).
+
+// ── Hummingbird ──
+.product-miniature {
+    .product-miniature__inner {
+    }
+
+    .product-miniature__title {
+    }
+
+    .product-miniature__price {
+    }
+}
+
+// ── Classic ──
+.product-miniature {
+    .thumbnail-container {
+    }
+
+    .product-title {
+    }
+
+    .price {
+    }
+}

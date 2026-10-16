@@ -1,0 +1,69 @@
+{
+  "folder": "dev",
+  "root": "_dev",
+  "binary": [],
+  "files": [
+    ".gitignore",
+    "package-lock.json",
+    "package.json",
+    "css/theme.scss",
+    "css/components/_buttons.scss",
+    "css/components/_footer.scss",
+    "css/components/_forms.scss",
+    "css/components/_header.scss",
+    "css/components/_product-miniature.scss",
+    "css/components/_typography.scss",
+    "css/pages/_account.scss",
+    "css/pages/_category.scss",
+    "css/pages/_checkout.scss",
+    "css/pages/_cms.scss",
+    "css/pages/_home.scss",
+    "css/pages/_product.scss",
+    "css/partials/_variables.scss",
+    "js/theme.js"
+  ],
+  "components": [
+    {
+      "id": "typography",
+      "label": "Typographie",
+      "desc": "titres h1 à h3, texte, liens du contenu",
+      "file": "css/components/_typography.scss",
+      "prefill": "prefill/components/_typography.scss"
+    },
+    {
+      "id": "buttons",
+      "label": "Boutons",
+      "desc": "principal, secondaire, contour, survol et focus",
+      "file": "css/components/_buttons.scss",
+      "prefill": "prefill/components/_buttons.scss"
+    },
+    {
+      "id": "header",
+      "label": "Header",
+      "desc": "fond, logo, icônes et compteur du panier, recherche",
+      "file": "css/components/_header.scss",
+      "prefill": "prefill/components/_header.scss"
+    },
+    {
+      "id": "footer",
+      "label": "Footer",
+      "desc": "fond foncé, titres de colonnes, liens, newsletter",
+      "file": "css/components/_footer.scss",
+      "prefill": "prefill/components/_footer.scss"
+    },
+    {
+      "id": "product-miniature",
+      "label": "Miniature produit",
+      "desc": "carte avec survol, titre, prix, badges",
+      "file": "css/components/_product-miniature.scss",
+      "prefill": "prefill/components/_product-miniature.scss"
+    },
+    {
+      "id": "forms",
+      "label": "Formulaires",
+      "desc": "champs, libellés, cases à cocher, erreurs",
+      "file": "css/components/_forms.scss",
+      "prefill": "prefill/components/_forms.scss"
+    }
+  ]
+}

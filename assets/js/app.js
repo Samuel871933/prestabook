@@ -7,6 +7,9 @@
     id_lang:  { label: 'id_lang', def: '1', clean: v => v.replace(/\D/g, '') },
     id_shop:  { label: 'id_shop', def: '1', clean: v => v.replace(/\D/g, '') },
     langs:    { label: 'Langues', hint: 'ex. 1:fr, 2:en', def: '1:fr', clean: v => v.replace(/[^\w:,; -]/g, '') },
+    // Saisies dans le générateur de kit (assets/js/kit.js), pas dans Réglages.
+    theme:    { label: 'Nom du thème', def: 'mon-theme', hidden: true, clean: v => v.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9_-]+/g, '-') },
+    theme_parent: { label: 'Thème parent', def: 'hummingbird', hidden: true, clean: v => v.toLowerCase().replace(/[^a-z0-9_-]/g, '') },
     shop_url: { label: 'URL de la boutique', hint: 'pour construire les liens et les URL des images', def: 'https://www.ma-boutique.fr', clean: v => v.trim().replace(/\/+$/, ''), wide: true },
   };
   const TYPES = { sql: 'Requête', note: 'Note', snippet: 'Snippet', builder: 'Générateur' };
@@ -15,6 +18,7 @@
     ['Exporter des données', 'Sortir clients, commandes ou produits dans un tableau'],
     ['Migrer une boutique', 'Préparer les fichiers d’import d’une autre boutique'],
     ['Comprendre PrestaShop', 'Comment c’est rangé dans la base et sur le disque'],
+    ['Développer un thème', 'Thème enfant, compilation SCSS, outillage'],
   ];
   const catDesc = c => (CATS.find(x => x[0] === c) || [])[1] || '';
   const catRank = c => { const i = CATS.findIndex(x => x[0] === c); return i < 0 ? CATS.length : i; };
@@ -221,8 +225,7 @@
     location.hash = '#/e/' + encodeURIComponent(e.id);
   }
 
-  function results() {
-    const t = tokens();
+  function results(t = tokens()) {
     const out = [];
     for (const e of state.entries) {
       if (state.cat && e.category !== state.cat) continue;
@@ -334,7 +337,10 @@
     s = esc(s)
       .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
       .replace(/(^|[^*])\*([^*]+)\*/g, '$1<em>$2</em>')
-      .replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (m, t, u) => `<a href="${/^(https?:|#|\/)/.test(u) ? u : '#'}" target="_blank" rel="noopener">${t}</a>`);
+      .replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (m, t, u) => (/^(https?:|#|\/)/.test(u)
+        ? `<a href="${u}" target="_blank" rel="noopener">${t}</a>`
+        : /^[\w./-]+$/.test(u) && !u.includes('..')
+          ? `<a href="${u}"${/\.zip$/.test(u) ? ' download class="dl-link"' : ''}>${t}</a>` : `<a href="#">${t}</a>`));
     return s.replace(/\u0000(\d+)\u0000/g, (m, i) => `<code>${withVars(esc(codes[i]))}</code>`);
   }
 
@@ -350,7 +356,9 @@
         i++;
         while (i < L.length && !/^```/.test(L[i])) buf.push(L[i++]);
         i++;
-        out.push(codeBlock(buf.join('\n'), lang));
+        // ```kit``` : générateur de kit téléchargeable (assets/js/kit.js)
+        out.push(lang === 'kit' ? `<div class="kit" data-kit="${esc(buf.join('').trim())}"><p class="loading">Chargement du générateur…</p></div>`
+          : codeBlock(buf.join('\n'), lang));
       } else if (/^#{1,4}\s/.test(l)) {
         const n = Math.min(l.match(/^#+/)[0].length + 1, 4);
         out.push(`<h${n}>${inline(l.replace(/^#+\s*/, ''))}</h${n}>`);
@@ -363,7 +371,9 @@
         const ordered = /^\s*\d+\./.test(l), buf = [];
         while (i < L.length && /^\s*([-*]|\d+\.)\s+/.test(L[i])) buf.push(L[i++].replace(/^\s*([-*]|\d+\.)\s+/, ''));
         const tag = ordered ? 'ol' : 'ul';
-        out.push(`<${tag}>${buf.map(x => `<li>${inline(x)}</li>`).join('')}</${tag}>`);
+        // Une liste coupée par un bloc de code reprend à son numéro (« 4. » après le code).
+        const start = ordered ? parseInt(l, 10) : 1;
+        out.push(`<${tag}${start > 1 ? ` start="${start}"` : ''}>${buf.map(x => `<li>${inline(x)}</li>`).join('')}</${tag}>`);
       } else if (/^\|/.test(l)) {
         const rows = [];
         while (i < L.length && /^\|/.test(L[i])) rows.push(L[i++]);
@@ -436,6 +446,97 @@
   // Versions affichées seulement quand une fiche ne couvre pas tout.
   const verNote = e => (e.vkeys.length && MAJORS.some(([k]) => !e.vkeys.includes(k)) ? `PS ${e.versions.join(' · ')}` : '');
 
+  /* ---------- Assistant (assets/js/assistant.js) ----------
+     La recherche est aussi lue comme une demande : « commandes ref, client depuis 01/01/2025 ».
+     Le plan s'affiche au-dessus des résultats ; Entrée (ou le bouton) l'applique. */
+  let curPlan = null;
+  const frDate = d => d.split('-').reverse().join('/');
+  const verLabelOf = k => (verInfo(k) || { label: k }).label;
+  function assistPlan() {
+    if (!state.q.trim() || !window.PBAssistant || !window.PBBuilder || !state.catalog) return null;
+    try {
+      return window.PBAssistant.parse(state.q, {
+        builder: window.PBBuilder, catalog: state.catalog, entries: state.entries, langs: valueOf('langs'),
+        version: verInfo(state.src) ? state.src : PS_VERSIONS[PS_VERSIONS.length - 1].key,
+        search: q => results(norm(q).split(/\s+/).filter(Boolean)),
+      });
+    } catch (err) { console.error(err); return null; }
+  }
+  function assistHTML() {
+    const p = curPlan = assistPlan();
+    if (!p) return '';
+    const chip = (txt, cls = '') => `<span class="assist__chip${cls}">${txt}</span>`;
+    const vars = Object.entries(p.vars || {}).map(([k, v]) => chip(`${esc(VARS[k] ? VARS[k].label : k)} = <code>${esc(v)}</code>`, ' assist__chip--opt'));
+    const notes = p.notes.length ? `<ul class="assist__notes">${p.notes.map(n => `<li class="${n.warn ? 'is-warn' : ''}">${esc(n.text)}</li>`).join('')}</ul>` : '';
+    let title, chips = [];
+    if (p.kind === 'entry') {
+      const v = p.versions || {};
+      title = `Ouvrir « ${esc(p.entry.title)} »`;
+      if (v.src) chips.push(chip(v.dst ? `Base PS ${esc(verLabelOf(v.src))} → boutique PS ${esc(verLabelOf(v.dst))}` : `PS ${esc(verLabelOf(v.src))}`, ' assist__chip--opt'));
+      chips = chips.concat(vars);
+    } else {
+      const E = window.PBBuilder.ENTITIES[p.entity];
+      const n = p.fields.length;
+      title = `Préparer l’export ${esc(E.label)}`;
+      if (p.preset === 'preset') chips.push(chip('Sélection Essentiel', ' assist__chip--opt'));
+      if (p.preset === 'all') chips.push(chip('Toutes les colonnes', ' assist__chip--opt'));
+      chips = chips.concat(p.fields.map(x => chip(x.field.raw ? `<code>${esc(x.field.col)}</code><small>${esc(x.group.label)}</small>` : esc(x.field.label))));
+      const fl = id => (E.filters.find(f => f.id === id) || { label: id }).label;
+      for (const [id, on] of Object.entries(p.filterOn)) chips.push(chip(`${on ? '' : 'Sans le filtre : '}${esc(fl(id))}`, ' assist__chip--filter'));
+      if (p.fv.from || p.fv.to) chips.push(chip(`Date de la commande ${p.fv.from ? 'du ' + frDate(p.fv.from) : ''}${p.fv.to ? ' au ' + frDate(p.fv.to) : ''}`, ' assist__chip--filter'));
+      if (p.fv.state) chips.push(chip(`État actuel = ${esc(p.fv.state)}`, ' assist__chip--filter'));
+      if (p.limit) chips.push(chip(`${esc(p.limit)} lignes max.`, ' assist__chip--filter'));
+      if (p.version) chips.push(chip(`PS ${esc(verLabelOf(p.version))}`, ' assist__chip--opt'));
+      if (p.headers) chips.push(chip(p.headers === 'tech' ? 'En-têtes : noms techniques' : 'En-têtes : libellés', ' assist__chip--opt'));
+      if (p.method) chips.push(chip(p.method === 'sub' ? 'Sous-requêtes' : 'Jointures', ' assist__chip--opt'));
+      chips = chips.concat(vars);
+      if (!n && !p.preset) chips.unshift(chip('colonnes actuelles conservées', ' assist__chip--muted'));
+      title += n || p.preset ? ` · ${p.preset ? (p.preset === 'all' ? 'tout' : 'Essentiel') + (n ? ' + ' + n : '') : n} colonne${n > 1 || p.preset ? 's' : ''}` : '';
+    }
+    return `<section class="assist" aria-label="Assistant">
+      <div class="assist__head"><span class="assist__icon" aria-hidden="true">⚡</span><strong>${title}</strong>
+        <button class="btn btn--primary assist__go" data-act="assist" type="button">Ouvrir <kbd>Entrée</kbd></button></div>
+      ${chips.length ? `<div class="assist__chips">${chips.join('')}</div>` : ''}
+      ${notes}
+    </section>`;
+  }
+  function applyPlan(p) {
+    for (const [k, v] of Object.entries(p.vars || {})) {
+      if (!VARS[k]) continue;
+      vals[k] = VARS[k].clean(String(v));
+      store.set('var:' + k, vals[k]);
+    }
+    const setVer = (k, key) => { if (key && verInfo(key)) { state[k] = key; store.set(k, key); } };
+    if (p.kind === 'entry') {
+      setVer('src', p.versions && p.versions.src);
+      setVer('dst', p.versions && (p.versions.dst || p.versions.src));
+    } else {
+      setVer('src', p.version);
+      const ent = p.entity, E = window.PBBuilder.ENTITIES[ent], conf = bConf(ent);
+      const ver = verInfo(state.src) ? state.src : PS_VERSIONS[PS_VERSIONS.length - 1].key;
+      const ids = p.fields.map(x => x.id);
+      if (p.method) conf.method = p.method;
+      if (p.headers) conf.headers = p.headers;
+      if (p.preset === 'preset') conf.selected = [...new Set(E.preset.concat(ids))];
+      else if (p.preset === 'all') {
+        const ok = usableFor(conf);
+        conf.selected = window.PBBuilder.fieldsOf(ent, state.catalog, ver).flatMap(g => g.fields).filter(ok).map(f => f.id);
+      } else if (ids.length) conf.selected = ids;
+      // Filtres : ceux par défaut, corrigés par la demande ; dates, état et limite remplacés.
+      const on = new Set(E.filters.filter(f => f.on && !f.input).map(f => f.id));
+      for (const [id, v] of Object.entries(p.filterOn)) v ? on.add(id) : on.delete(id);
+      conf.filters = [...on];
+      conf.fv = { ...p.fv };
+      conf.limit = p.limit || '';
+      bstate.entity = ent;
+      bSave();
+    }
+    input.value = state.q = '';
+    const n = p.kind === 'builder' ? bConf(p.entity).selected.length : 0;
+    location.hash = '#/e/' + encodeURIComponent(p.entry.id);
+    toast(p.kind === 'builder' ? `Assistant : ${n} colonne${n > 1 ? 's' : ''} cochée${n > 1 ? 's' : ''}, filtres réglés` : 'Fiche ouverte avec tes réglages');
+  }
+
   function card(e, t, showCat) {
     const snip = snippetFor(e, t), vn = verNote(e);
     return `<article class="card">
@@ -449,6 +550,7 @@
 
   function renderList() {
     const t = tokens();
+    const assist = assistHTML();
     const list = results();
     const filters = [
       state.cat && ['cat', state.cat], state.run && ['run', RUN[state.run].side], state.tag && ['tag', state.tag], state.ver && ['ver', 'PS ' + majorLabel(state.ver)],
@@ -461,10 +563,11 @@
       : null;
 
     view.innerHTML = `
-      <div class="list-head"><h1>${title}</h1><span class="meta">${list.length} fiche${list.length > 1 ? 's' : ''}</span></div>
+      ${assist}
+      ${assist && !list.length ? '' : `<div class="list-head"><h1>${assist ? 'Fiches liées' : title}</h1><span class="meta">${list.length} fiche${list.length > 1 ? 's' : ''}</span></div>`}
       ${state.cat && catDesc(state.cat) ? `<p class="list-desc">${esc(catDesc(state.cat))}</p>` : ''}
       ${filters.length ? `<div class="active-filters">${filters.map(([k, v]) => `<button class="tag is-active" data-filter="${k}" data-value="" type="button" title="Retirer ce filtre">${esc(v)} ✕</button>`).join('')}<button class="chip-clear" data-act="clear" type="button">Tout effacer</button></div>` : ''}
-      ${!list.length ? `<div class="empty"><strong>Aucune fiche trouvée</strong>Essaie un autre mot-clé, un nom de table (ex. <code>specific_price</code>) ou retire les filtres.</div>`
+      ${!list.length ? (assist ? '' : `<div class="empty"><strong>Aucune fiche trouvée</strong>Essaie un autre mot-clé, un nom de table (ex. <code>specific_price</code>) ou retire les filtres.</div>`)
         : sections ? sections.map(([c, l]) => `<section class="cat-section">
             <div class="cat-section__head"><h2><button data-filter="cat" data-value="${esc(c)}" type="button">${esc(c)}</button></h2>${catDesc(c) ? `<p>${esc(catDesc(c))}</p>` : ''}</div>
             <div class="grid">${l.map(e => card(e, t, false)).join('')}</div>
@@ -517,7 +620,7 @@
       : codeBlock(e.content, e.type === 'sql' ? 'sql' : (e.lang || ''), e.file ? e.file.split('/').pop() : e.id);
     const notes = e.notes ? `<div class="prose">${md(e.notes)}</div>` : '';
     const found = new Set([...(e.content + e.notes).matchAll(VAR_RE)].map(m => m[1]));
-    const used = bctx ? ['prefix', 'id_shop', 'langs', 'shop_url'] : Object.keys(VARS).filter(k => found.has(k));
+    const used = bctx ? ['prefix', 'id_shop', 'langs', 'shop_url'] : Object.keys(VARS).filter(k => found.has(k) && !VARS[k].hidden);
     const field = k => `<div class="field${VARS[k].wide ? ' field--wide' : ''}"><label for="v-${k}">${esc(VARS[k].label)}</label>
           <input id="v-${k}" data-var-input="${k}" value="${esc(vals[k])}" placeholder="${esc(VARS[k].def)}" spellcheck="false" autocomplete="off"${k === 'prefix' ? ' list="prefixes"' : ''}>${VARS[k].hint ? `<small class="field__hint">${esc(VARS[k].hint)}</small>` : ''}</div>`;
     const dbField = used.length ? `<div class="pgroup">
@@ -542,6 +645,7 @@
       ${e.tags.length ? `<div class="tags"><span class="tags__label">Autres fiches sur :</span>${e.tags.map(g => `<button class="tag" data-filter="tag" data-value="${esc(g)}" type="button">${esc(g)}</button>`).join('')}</div>` : ''}
     </article>`;
     document.title = `${e.title} · PrestaBook`;
+    if (window.PBKit) view.querySelectorAll('[data-kit]').forEach(window.PBKit.mount);
   }
 
 
@@ -579,10 +683,11 @@
   }
   const bGroups = ent => window.PBBuilder.fieldsOf(ent, state.catalog, bctx.version);
   const usableFor = conf => f => f.available && !(f.subOnly && conf.method !== 'sub');
-  // Bandeau des champs cochés, dans l'ordre des colonnes de la requête.
+  // Bandeau des champs cochés, dans l'ordre des colonnes de la requête (celui de la sélection).
   function pickedHTML() {
     const ent = bEnt(), conf = bConf(ent), sel = new Set(conf.selected), ok = usableFor(conf);
-    const picked = bGroups(ent).flatMap(g => g.fields.filter(f => sel.has(f.id) && ok(f)).map(f => [f, g]));
+    const byId = new Map(bGroups(ent).flatMap(g => g.fields.map(f => [f.id, [f, g]])));
+    const picked = conf.selected.map(id => byId.get(id)).filter(x => x && ok(x[0]));
     if (!picked.length) return '<p class="b-picked__empty">Aucune colonne pour l’instant : coche des champs ci-dessous ou pars de la sélection <strong>Essentiel</strong>.</p>';
     return picked.map(([f, g]) => `<button type="button" class="b-chip" data-b-act="unpick" data-id="${esc(f.id)}" title="${esc(g.label)} · cliquer pour retirer">${f.raw ? `<code>${esc(f.col)}</code>` : esc(f.label)}<span aria-hidden="true">✕</span></button>`).join('');
   }
@@ -865,6 +970,7 @@
     const a = ev.target.closest('[data-act]');
     if (!a) return;
     const act = a.dataset.act;
+    if (act === 'assist') { if (curPlan && state.q.trim()) applyPlan(curPlan); return; }
     if (act === 'clear') {
       state.cat = state.run = state.tag = state.ver = null;
       state.q = input.value = '';
@@ -952,6 +1058,7 @@
   input.addEventListener('input', () => { state.q = input.value; showList(); });
   input.addEventListener('keydown', ev => {
     if (ev.key === 'Enter') {
+      if (curPlan && state.q.trim()) { applyPlan(curPlan); input.blur(); return; }
       const first = results()[0];
       if (first) { openEntry(first); input.blur(); }
     } else if (ev.key === 'Escape') {

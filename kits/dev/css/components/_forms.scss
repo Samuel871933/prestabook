@@ -1,0 +1,11 @@
+@use "../partials/variables" as *;
+
+// Champs (Bootstrap, Hummingbird et Classic).
+
+.form-control {
+}
+
+// Hummingbird : .form-label ; Classic : .form-control-label
+.form-label,
+.form-control-label {
+}

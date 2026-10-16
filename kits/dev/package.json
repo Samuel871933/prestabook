@@ -1,0 +1,13 @@
+{
+    "name": "_dev",
+    "version": "1.0.0",
+    "private": true,
+    "scripts": {
+        "sass:compile": "node node_modules/sass/sass.js --style=compressed css/theme.scss:css/theme.css",
+        "watch:sass": "node node_modules/sass/sass.js --watch --style=compressed css/theme.scss:css/theme.css",
+        "sass:prod": "node node_modules/sass/sass.js --style=compressed --no-source-map css/theme.scss:css/theme.css"
+    },
+    "devDependencies": {
+        "sass": "^1.92.1"
+    }
+}
