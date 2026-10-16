@@ -60,6 +60,20 @@ const cases = [
     p.fv.from === '2025-03-01' && p.fv.to === '2025-03-31' && p.fv.state === '4' && p.filterOn.shop === false && p.headers === 'tech'],
   ['commandes 2025', p => p.fv.from === '2025-01-01' && p.fv.to === '2025-12-31'],
   ['export produits csv 1.6 vers 8 préfixe Abc_', p => p.kind === 'entry' && p.entry.id === 'export-produits-csv' && p.versions.dst === '8' && p.vars.prefix === 'Abc_'],
+  // Mots anglais : traduits puis traités comme leur équivalent français.
+  ['commande user_id', p => p.fields.map(x => x.id).join() === 'orders.id_customer'],
+  ['orders reference, customer, carrier, total paid', p =>
+    p.entity === 'order' && p.fields.map(x => x.id).join() === 'orders.reference,cu_name,carrier_name,orders.total_paid_tax_incl'],
+  ['commande status country city', p => p.fields.map(x => x.id).join() === 'state,ad_country,delivery.city'],
+  ['users first name last name zip code', p =>
+    p.entity === 'customer' && p.fields.map(x => x.id).join() === 'customer.firstname,customer.lastname,address.postcode'],
+  ['products price qty brand categories', p =>
+    p.fields.map(x => x.id).join() === 'product_shop.price,stock.quantity,manufacturer,categories' && !p.notes.some(n => n.warn)],
+  // Un mot répété ouvre un nouveau champ ; « nom produit » ne prend que les noms.
+  ['commande id client nom produits nom client téléphone mobile téléphone', p =>
+    p.fields.map(x => x.id).join() === 'orders.id_customer,lines_names,cu_name,delivery.phone_mobile,delivery.phone'],
+  ['commande ville ville facturation', p => p.fields.map(x => x.id).join() === 'delivery.city,invoice.city'],
+  ['commande nom produit, réf produit, produits', p => p.fields.map(x => x.id).join() === 'lines_names,lines_refs,lines'],
   ['migration déclinaisons 1.7.8 vers 9', p => p.kind === 'entry' && p.entry.id === 'export-declinaisons-csv' && p.versions.src === '1.7.7'],
 ];
 for (const [q, ok] of cases) {

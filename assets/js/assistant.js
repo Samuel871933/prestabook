@@ -15,13 +15,14 @@
   const STOP = new Set(('de du des la le les l d un une par en au aux pour avec a et ou sur dans son sa ses leur leurs '
     + 'export exporter exporte requete requetes liste lister extraire extraction sql csv fichier tableau donne moi je veux voudrais '
     + 'colonne colonnes champ champs info infos uniquement seulement que qui avoir afficher affiche sortir sors fais faire genere generer '
-    + 'prepare preparer plus + ainsi aussi ensuite puis svp stp merci').split(' '));
+    + 'prepare preparer plus + ainsi aussi ensuite puis svp stp merci '
+    + 'the of with all get show list give want select field fields column columns only please').split(' '));
 
   const ENTITY_WORDS = {
-    customer: ['client', 'customer', 'acheteur', 'inscrit', 'compte'],
+    customer: ['client', 'customer', 'acheteur', 'inscrit', 'compte', 'user', 'buyer'],
     order: ['commande', 'cde', 'cmd', 'order', 'vente'],
     product: ['produit', 'product', 'article', 'catalogue'],
-    combination: ['declinaison', 'decli', 'combinaison', 'combination', 'variante'],
+    combination: ['declinaison', 'decli', 'combinaison', 'combination', 'variante', 'variant'],
   };
 
   // Synonymes français -> mots présents dans les noms de colonnes / libellés.
@@ -74,6 +75,49 @@
       client: 'id_customer', commande: 'id_order', produit: 'id_product', declinaison: 'id_product_attribute', adresse: 'id_address',
       transporteur: 'id_carrier', devise: 'id_currency', panier: 'id_cart', langue: 'id_lang', boutique: 'id_shop' }[x])],
   ];
+  /* Anglais -> concept français : les mots anglais suivent ensuite le même chemin (synonymes, champ par défaut).
+     Expressions d'abord, puis mot à mot (les noms techniques avec « _ » ne sont pas traduits). */
+  const EN_ID = { user: 'id_customer', customer: 'id_customer', client: 'id_customer', buyer: 'id_customer', order: 'id_order',
+    product: 'id_product', item: 'id_product', combination: 'id_product_attribute', variant: 'id_product_attribute',
+    address: 'id_address', carrier: 'id_carrier', cart: 'id_cart', currency: 'id_currency', lang: 'id_lang', language: 'id_lang', shop: 'id_shop', store: 'id_shop' };
+  const EN_IDS = Object.keys(EN_ID).join('|');
+  const EN_PHRASES = [
+    [new RegExp(`\\b(${EN_IDS})s?[ _-]?(?:id|ids)\\b|\\bids?[ _-](${EN_IDS})s?\\b`, 'g'), (m, a, b) => EN_ID[a || b]],
+    [/\bfirst ?names?\b/g, 'prenom'], [/\b(?:last|sur|family) ?names?\b/g, 'nom'], [/\bfull ?names?\b/g, 'nom complet'],
+    [/\b(?:zip|postal|post) ?codes?\b/g, 'postcode'], [/\b(?:mobile|cell) ?phones?\b|\bmobile numbers?\b/g, 'phone_mobile'],
+    [/\bphone ?numbers?\b/g, 'telephone'], [/\b(?:dates? (?:of )?birth|birth ?dates?|birthdays?)\b/g, 'birthday'],
+    [/\b(?:created(?: at| on)?|creation dates?|dates? (?:created|added)|added on)\b/g, 'date_add'],
+    [/\b(?:updated(?: at| on)?|modified(?: at| on)?|last updates?|dates? (?:updated|modified))\b/g, 'date_upd'],
+    [/\btracking (?:numbers?|codes?)\b/g, 'tracking'], [/\binvoice numbers?\b/g, 'invoice_number'], [/\binvoice dates?\b/g, 'invoice_date'],
+    [/\bdelivery dates?\b/g, 'delivery_date'], [/\bshipping (?:costs?|fees?|prices?)\b/g, 'shipping'],
+    [/\b(?:wholesale|purchase|cost) prices?\b/g, 'wholesale_price'], [/\bshort descriptions?\b/g, 'description_short'],
+    [/\bvat (?:numbers?|ids?)\b/g, 'vat_number'], [/\b(?:discount|voucher|coupon|promo) codes?\b|\bcart rules?\b/g, 'cart_rules'],
+    [/\bmeta titles?\b|\bseo titles?\b/g, 'meta_title'], [/\bmeta descriptions?\b|\bseo descriptions?\b/g, 'meta_description'],
+    [/\bfriendly urls?\b|\burl rewrites?\b/g, 'link_rewrite'], [/\bgift messages?\b/g, 'gift_message'],
+    [/\b(?:total|amount) (?:paid|spent)\b/g, 'total'], [/\bunit prices?\b/g, 'prix'],
+  ];
+  const EN = {
+    user: 'client', customer: 'client', buyer: 'client', name: 'nom', firstname: 'prenom', lastname: 'nom',
+    phone: 'telephone', address: 'adresse', city: 'ville', town: 'ville', zip: 'postcode', zipcode: 'postcode', country: 'pays',
+    status: 'statut', carrier: 'transporteur', payment: 'paiement', currency: 'devise', invoice: 'facture', billing: 'facturation',
+    delivery: 'livraison', tracking: 'suivi', discount: 'reduction', price: 'prix', cost: 'cout', quantity: 'quantite', qty: 'quantite',
+    brand: 'marque', manufacturer: 'marque', supplier: 'fournisseur', vendor: 'fournisseur', category: 'categorie',
+    picture: 'image', photo: 'image', title: 'titre', link: 'lien', active: 'actif', enabled: 'actif', created: 'creation', updated: 'modification',
+    gender: 'civilite', group: 'groupe', language: 'langue', shop: 'boutique', store: 'boutique', weight: 'poids', width: 'largeur',
+    height: 'hauteur', depth: 'profondeur', company: 'societe', product: 'produit', item: 'produit', variant: 'declinaison',
+    combination: 'declinaison', attribute: 'attribut', feature: 'caracteristique', number: 'numero', count: 'nombre', comment: 'commentaire',
+    note: 'commentaire', gift: 'cadeau', cart: 'panier', tax: 'taxe', vat: 'tva', label: 'libelle', amount: 'total', available: 'dispo',
+  };
+  function english(t) {
+    for (const [re, to] of EN_PHRASES) t = t.replace(re, typeof to === 'function' ? (...a) => ` ${to(...a)} ` : ` ${to} `);
+    return t.replace(/(^|[\s,;+/])([a-z]+)(?=$|[\s,;+/])/g, (m, pre, w) => {
+      if (EN[w]) return pre + EN[w];
+      // Pluriel anglais -> pluriel français (garde le choix « liste » des pluriels).
+      const one = w.length > 3 && EN[w.replace(/ies$/, 'y').replace(/(?:ses|xes)$/, m2 => m2.slice(0, -2)).replace(/s$/, '')];
+      return one ? pre + one + (/[sx]$/.test(one) ? '' : 's') : m;
+    });
+  }
+
   const ENTITY_PHRASES = {
     product: [[/\bprix ttc\b/g, 'price tax_rules', 'PrestaShop ne stocke que le prix HT : j\'ai pris le prix HT et la règle de taxes.']],
     combination: [[/\bprix ttc\b/g, 'final_price', 'Pas de prix TTC stocké : j\'ai pris le prix HT final (produit + impact).']],
@@ -295,8 +339,9 @@
     const alts = [w, sing(w), ...(SYN[w] || SYN[sing(w)] || [])];
     let best = 0;
     for (const x of list) {
+      const xs = sing(x);
       for (const a of alts) {
-        if (a === x) return 3;
+        if (a === x || a === xs) return 3;
         if (a.includes('_') || x.includes('_')) continue; // un nom technique ne se compare qu'en entier
         if (a.length >= 4 && x.length >= 4 && (x.startsWith(a) || a.startsWith(x))) best = Math.max(best, 2);
         else if (fuzzy(a, x)) best = Math.max(best, 1.5);
@@ -332,7 +377,7 @@
   function parseFields(text, idx, entity, picked = []) {
     const found = [], unknown = [], notes = [];
     const self = new Set(ENTITY_WORDS[entity]);
-    for (const seg of text.split(/\s*(?:,|;|\+|\bet\b|\bpuis\b|\/)\s*/)) {
+    for (const seg of text.split(/\s*(?:,|;|\+|\bet\b|\band\b|\bpuis\b|\/)\s*/)) {
       const toks = norm(seg).replace(/[()[\]:'’]/g, ' ').split(/\s+/).filter(Boolean);
       const ws = [], glue = [];
       for (const w of toks) {
@@ -350,6 +395,10 @@
             if (strict && glue[i + len - 1] && i + len < ws.length) continue;
             const part = ws.slice(i, i + len);
             if (len === 1 && self.has(sing(part[0]))) continue;
+            // Un mot répété ouvre un nouveau champ (« téléphone mobile téléphone » = deux champs).
+            if (new Set(part.map(sing)).size < len) continue;
+            // Un nom technique (« phone_mobile ») désigne à lui seul un champ.
+            if (len > 1 && part.some(w => w.includes('_'))) continue;
             const r = scoreFields(idx, part, entity, /[sx]$/.test(part[part.length - 1]));
             if (r && (len === 1 || r[0].s >= len * 2.2)) hit = { r, len, text: part.join(' ') };
           }
@@ -390,7 +439,7 @@
     }
     return { t, picked };
   }
-  const fieldName = it => (it.f.raw ? `${it.g.table}.${it.f.col}` : it.f.label);
+  const fieldName = it => (it.f.hlabel || (it.f.raw ? `${it.g.table}.${it.f.col}` : it.f.label));
 
   /* ---------- Entité ---------- */
   // Premier mot qui désigne une entité ; on le retire sans toucher aux virgules.
@@ -467,6 +516,7 @@
 
     for (const [re, to, note] of ENTITY_PHRASES[entity] || []) if (re.test(rest)) { rest = rest.replace(re, ` ${to} `); notes.push({ text: note }); }
     for (const [re, to] of PHRASES) rest = rest.replace(re, typeof to === 'function' ? (...a) => ` ${to(...a)} ` : ` ${to} `);
+    rest = english(rest);
     const { found, unknown, notes: fnotes } = parseFields(rest, idx, entity, ex.picked);
     notes.push(...fnotes);
     // Doublons et champs indisponibles.
