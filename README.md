@@ -30,8 +30,10 @@ Le fichier `.nojekyll` désactive Jekyll pour que les fichiers soient servis tel
   "id": "ma-requete",
   "title": "Titre lisible",
   "type": "sql",
-  "category": "Commandes",
-  "tags": ["commandes", "export"],
+  "category": "Exporter des données",
+  "run": "bo",
+  "tags": ["commandes"],
+  "keywords": ["export", "CSV"],
   "versions": ["1.7", "8.x"],
   "status": "testé",
   "updated": "2026-10-16",
@@ -42,6 +44,11 @@ Le fichier `.nojekyll` désactive Jekyll pour que les fichiers soient servis tel
 ```
 
 Pour une doc longue (tableaux de colonnes…), mettre plutôt `"doc": "content/sql/ma-requete.md"` : le markdown est affiché sous la requête. Dans un tableau, un `|` à l'intérieur de `code` ne coupe pas la cellule.
+
+- `category` : ce qu'on veut faire. Les catégories de l'accueil, leur ordre et leur description sont dans `CATS`, en haut de `assets/js/app.js` : « Exporter des données », « Migrer une boutique », « Comprendre PrestaShop ». Une catégorie absente de `CATS` s'affiche quand même, en dernier.
+- `run` : où lancer la requête, `bo` (Gestionnaire SQL du back-office) ou `db` (phpMyAdmin, Adminer…). À omettre pour une note.
+- `tags` : les **sujets** seulement (produits, commandes, clients, images, stock…). Ils sont affichés et servent de filtre.
+- `keywords` : synonymes et termes techniques trouvés par la recherche, mais pas affichés (ex. `combinaisons`, `import CSV`).
 
 `type` : `sql`, `note` ou `snippet` (snippet = code brut, préciser `"lang": "php"` par ex.). Un `status` contenant « vérifier », « todo » ou « brouillon » s'affiche en orange.
 
@@ -62,24 +69,43 @@ Pour en ajouter une, compléter l'objet `VARS` en haut de `assets/js/app.js`.
 
 ## Versions PrestaShop
 
-`versions` d'une fiche (`1.6`, `1.7`, `8.x`, `9.x`) alimente le filtre **Version PrestaShop** de la barre latérale. Le choix est mémorisé dans le navigateur.
+`versions` d'une fiche (`1.6`, `1.7`, `8.x`, `9.x`) alimente le choix **Ma version de PrestaShop** de la barre latérale : il masque les fiches qui ne couvrent pas cette version et règle la base source des fiches sur cette version. Le choix est mémorisé dans le navigateur. Les cartes n'affichent les versions que si une fiche ne les couvre pas toutes.
 
-Pour une requête qui change selon la version, encadrer les lignes concernées avec des commentaires SQL :
+Pour une requête qui change selon la version, on encadre les lignes avec des commentaires SQL. Deux variables sont disponibles :
+
+- `ps` : version de la **base source**, celle où on lance la requête (quelles colonnes existent) ;
+- `cible` : version de la **boutique cible**, celle où on importe (quels champs, dans quel ordre).
 
 ```sql
--- @if ps >= 8
-    ps.unit_price AS 'Unit price',
--- @elif ps >= 1.7.3
-    ...
+-- @if cible >= 1.7.7
+-- @if ps >= 1.7.7
+    COALESCE(p.mpn, '') AS 'MPN',
 -- @else
-    IF(ps.unit_price_ratio > 0, ROUND(ps.price / ps.unit_price_ratio, 6), 0) AS 'Unit price',
+    '' AS 'MPN',
+-- @endif
 -- @endif
 ```
 
-- Opérateurs : `>=`, `<=`, `>`, `<`, `==` (égalité sur le début du numéro : `ps == 1.7` couvre toute la 1.7) et `!=`. On peut les combiner avec `and`.
-- La fiche affiche des onglets de version. Seule la branche correspondante est affichée, copiée et téléchargée, et ses numéros de ligne sont en rose.
-- Pour les comparaisons, chaque version vaut sa dernière mineure : 1.6 = 1.6.1, 1.7 = 1.7.8, 8 = 8.2, 9 = 9.0 (`PS_VERSIONS` dans `assets/js/app.js`).
+- Opérateurs : `>=`, `<=`, `>`, `<`, `==` (sur le début du numéro : `ps == 1.7` couvre toute la 1.7) et `!=`, combinables avec `and`. On peut aussi utiliser `@elif`, et imbriquer les blocs.
+- Sur la fiche, des onglets **Base source** / **Boutique cible** apparaissent. L'onglet cible n'est affiché que si la requête utilise `cible`. Seules les branches retenues sont affichées, copiées et téléchargées, et leurs numéros de ligne sont en rose.
+- Les tranches de versions proposées (`PS_VERSIONS` dans `assets/js/app.js`) suivent les changements de l'import : 1.6, 1.7.0–1.7.2, 1.7.3–1.7.4, 1.7.5–1.7.6, 1.7.7–1.7.8, 8.x, 9.x.
+- Une ligne qui commence par `--!` est un commentaire réservé au fichier brut : elle n'apparaît pas sur le site.
 - Ça marche aussi dans les blocs de code des notes markdown.
+
+## Générateur d'export (Gestionnaire SQL)
+
+La fiche de type `builder` (« Export configurable clients, commandes, produits, déclinaisons ») construit une requête compatible avec **Paramètres avancés > Base de données > Gestionnaire SQL**.
+
+- Moteur et définition des entités : `assets/js/builder.js`. Pour chaque entité : jointures, groupes de colonnes brutes, champs liés, listes, filtres et préréglage « Essentiel ».
+- Colonnes disponibles par version : `data/schema-catalog.json`. Il a été généré depuis les `db_structure.sql` officiels et les entités Doctrine (`lang`, `shop`, `attribute*`) de 14 versions, de 1.6.1 à 9.0.
+- Pour ajouter une table, ajoute ses colonnes au catalogue, puis un groupe `{ table, alias, join }` dans l'entité.
+
+## Où lancer la requête (`run`)
+
+- `bo` : la requête passe dans le Gestionnaire SQL du back-office (vérifiée avec le validateur `RequestSql`).
+- `db` : à lancer dans phpMyAdmin, Adminer, DBeaver… Le Gestionnaire SQL refuse par exemple `SET`, les tables dérivées `JOIN (SELECT …)` ou `REPLACE()`.
+
+Le champ ajoute un badge sur les cartes et les fiches, et alimente le filtre « Où lancer la requête ? » de la barre latérale.
 
 ## Raccourcis
 

@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PrestaBook</title>
+  <meta name="description" content="Base de connaissances PrestaShop : requêtes SQL, notes et snippets.">
+  <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <script>try{var t=localStorage.getItem('prestabook:theme');if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar__inner">
+      <a class="brand" href="#/" aria-label="PrestaBook, accueil">
+        <svg class="brand__mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#DF0067"/><path d="M9 8h9.5a6 6 0 0 1 0 12H13v4H9V8Zm4 4v4h5.3a2 2 0 0 0 0-4H13Z" fill="#fff"/></svg>
+        <span class="brand__name">Presta<b>Book</b></span>
+      </a>
+      <label class="search">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.5 3a7.5 7.5 0 0 1 5.96 12.05l4.25 4.24-1.42 1.42-4.24-4.25A7.5 7.5 0 1 1 10.5 3Zm0 2a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11Z"/></svg>
+        <input id="q" type="search" placeholder="Rechercher une requête, une table, un tag…" autocomplete="off" spellcheck="false" aria-label="Rechercher">
+        <kbd>/</kbd>
+      </label>
+      <button id="theme" class="icon-btn" type="button" aria-label="Changer de thème" title="Changer de thème">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9Z"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <aside class="sidebar" id="sidebar" aria-label="Filtres"></aside>
+    <main class="view" id="view"><p class="loading">Chargement…</p></main>
+  </div>
+
+  <footer class="footer">PrestaBook · notes perso PrestaShop · contenu dans <code>data/entries.json</code></footer>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="assets/js/builder.js" defer></script>
+  <script src="assets/js/app.js" defer></script>
+</body>
+</html>

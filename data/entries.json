@@ -1,0 +1,118 @@
+[
+  {
+    "id": "export-bo-configurable",
+    "title": "Export configurable clients, commandes, produits, déclinaisons",
+    "type": "builder",
+    "category": "Exporter des données",
+    "run": "bo",
+    "tags": [
+      "clients",
+      "commandes",
+      "produits",
+      "déclinaisons"
+    ],
+    "keywords": [
+      "export",
+      "Gestionnaire SQL",
+      "multilingue",
+      "CSV"
+    ],
+    "versions": [
+      "1.6",
+      "1.7",
+      "8.x",
+      "9.x"
+    ],
+    "status": "vérifié sur le validateur du BO",
+    "updated": "2026-10-16",
+    "summary": "Coche les champs à exporter parmi toutes les colonnes de la version (textes de chaque langue, jointures, listes, adresses de livraison et de facturation) : la requête générée passe dans Paramètres avancés > Base de données > Gestionnaire SQL.",
+    "doc": "content/builder/export-bo.md"
+  },
+  {
+    "id": "export-produits-csv",
+    "title": "Export des produits au format import CSV",
+    "type": "sql",
+    "category": "Migrer une boutique",
+    "run": "db",
+    "tags": [
+      "produits",
+      "images",
+      "stock",
+      "prix",
+      "caractéristiques"
+    ],
+    "keywords": [
+      "export",
+      "import CSV",
+      "Paramètres avancés > Importer",
+      "prix spécifiques",
+      "migration"
+    ],
+    "versions": [
+      "1.6",
+      "1.7",
+      "8.x",
+      "9.x"
+    ],
+    "status": "vérifié sur schémas",
+    "updated": "2026-10-16",
+    "file": "content/sql/export-produits-csv.sql",
+    "summary": "Prêt pour Paramètres avancés > Importer > Produits : colonnes dans l'ordre exact de l'import de la version cible (1.6 à 9), lues dans le schéma de la version source. Pratique pour une migration, par exemple de 1.6 vers 8.",
+    "doc": "content/sql/export-produits-csv.md"
+  },
+  {
+    "id": "export-declinaisons-csv",
+    "title": "Export des déclinaisons au format import CSV",
+    "type": "sql",
+    "category": "Migrer une boutique",
+    "run": "db",
+    "tags": [
+      "déclinaisons",
+      "images",
+      "stock"
+    ],
+    "keywords": [
+      "export",
+      "import CSV",
+      "Paramètres avancés > Importer",
+      "combinaisons",
+      "attributs",
+      "migration"
+    ],
+    "versions": [
+      "1.6",
+      "1.7",
+      "8.x",
+      "9.x"
+    ],
+    "status": "vérifié sur schémas",
+    "updated": "2026-10-16",
+    "file": "content/sql/export-declinaisons-csv.sql",
+    "summary": "Prêt pour Paramètres avancés > Importer > Combinaisons, de 1.6 à 9 : attributs, références, impacts, stock, et images par position recalculée pour éviter les doublons après l'import des produits.",
+    "doc": "content/sql/export-declinaisons-csv.md"
+  },
+  {
+    "id": "chemin-images-produits",
+    "title": "Chemin des images produits (img/p)",
+    "type": "note",
+    "category": "Comprendre PrestaShop",
+    "tags": [
+      "images"
+    ],
+    "keywords": [
+      "img/p",
+      "id_image",
+      "miniatures",
+      "SQL"
+    ],
+    "versions": [
+      "1.6",
+      "1.7",
+      "8.x"
+    ],
+    "status": "à vérifier",
+    "updated": "2026-10-16",
+    "file": "content/notes/chemin-images-produits.md",
+    "summary": "Comment PrestaShop range les images produits sur le disque, et comment reconstruire leur URL en SQL."
+  }
+]
